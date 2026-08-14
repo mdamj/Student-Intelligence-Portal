@@ -6,35 +6,44 @@ const router = express.Router();
 
 router.post("/signup", async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
-    // Check required fields
-    if (!name || !email || !password) {
+    if (!name?.trim() || !email?.trim() || !password) {
       return res.status(400).json({
         success: false,
         message: "Name, email and password are required"
       });
     }
 
-    // Check existing user
-    const existingUser = await User.findOne({ email });
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters long"
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existingUser = await User.findOne({
+      email: normalizedEmail
+    });
 
     if (existingUser) {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
         message: "Email already registered"
       });
     }
 
-    // Hash password using bcrypt
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Public signup always creates a student.
+    // Admin/trainer accounts must be created by an authorized process.
     const user = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: normalizedEmail,
       password: hashedPassword,
-      role: role || "student"
+      role: "student"
     });
 
     res.status(201).json({
@@ -47,9 +56,15 @@ router.post("/signup", async (req, res) => {
         role: user.role
       }
     });
-
   } catch (error) {
     console.error("Signup error:", error);
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "Email already registered"
+      });
+    }
 
     res.status(500).json({
       success: false,

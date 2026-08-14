@@ -458,3 +458,5 @@ tbody tr:hover {
   }
 
 }
+.dashboard-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+@media (max-width: 768px) { .dashboard-actions { width: 100%; } }
