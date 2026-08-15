@@ -10,25 +10,35 @@ import studentRoutes from "./routes/studentRoutes.js";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim().replace(/\/$/, ""))
-  .filter(Boolean);
+// Allowed frontend URLs
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://student-intelligence-portal.vercel.app"
+];
 
+// CORS
 app.use(
   cors({
-    origin(origin, callback) {
+    origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
+        callback(null, true);
+      } else {
+        callback(new Error("CORS origin not allowed"));
       }
-
-      return callback(new Error("CORS origin not allowed"));
-    }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
 
+// Handle preflight requests
+app.options("*", cors());
+
+// JSON parser
 app.use(express.json({ limit: "2mb" }));
 
+// Test route
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -36,12 +46,14 @@ app.get("/", (req, res) => {
   });
 });
 
+// Routes
 app.use("/api/auth", signinRoutes);
 app.use("/api/auth", signupRoutes);
 app.use("/api/students", studentRoutes);
 
+// Error handler
 app.use((err, req, res, next) => {
-  console.error(err);
+  console.error("Server Error:", err);
 
   if (err.message === "CORS origin not allowed") {
     return res.status(403).json({
@@ -56,6 +68,7 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Start server
 const startServer = async () => {
   try {
     await connectDB();
